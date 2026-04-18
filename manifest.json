@@ -1,0 +1,23 @@
+{
+  "name": "Guess the Number",
+  "short_name": "GuessIt!",
+  "description": "Guess the secret number between 1 and 30 in just 4 chances!",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#07030f",
+  "theme_color": "#00f5ff",
+  "icons": [
+    { "src": "icon-72.png",  "sizes": "72x72",   "type": "image/png" },
+    { "src": "icon-96.png",  "sizes": "96x96",   "type": "image/png" },
+    { "src": "icon-128.png", "sizes": "128x128", "type": "image/png" },
+    { "src": "icon-144.png", "sizes": "144x144", "type": "image/png" },
+    { "src": "icon-152.png", "sizes": "152x152", "type": "image/png" },
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icon-384.png", "sizes": "384x384", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ],
+  "screenshots": [
+    { "src": "splash.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

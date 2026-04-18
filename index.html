@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Guess the Number</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Rajdhani:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --cyan: #00f5ff;
+    --pink: #ff2d78;
+    --yellow: #ffe600;
+    --green: #00ff88;
+    --bg: #07030f;
+  }
+
+  body {
+    min-height: 100vh;
+    background: var(--bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Rajdhani', sans-serif;
+    overflow: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,245,255,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,245,255,0.04) 1px, transparent 1px);
+    background-size: 40px 40px;
+    animation: gridMove 8s linear infinite;
+    pointer-events: none;
+  }
+
+  @keyframes gridMove {
+    0%   { background-position: 0 0; }
+    100% { background-position: 40px 40px; }
+  }
+
+  .orb { position: fixed; border-radius: 50%; filter: blur(80px); opacity: 0.18; pointer-events: none; animation: drift 10s ease-in-out infinite alternate; }
+  .orb1 { width: 400px; height: 400px; background: var(--cyan); top: -100px; left: -100px; }
+  .orb2 { width: 300px; height: 300px; background: var(--pink); bottom: -80px; right: -80px; animation-delay: -4s; }
+  .orb3 { width: 200px; height: 200px; background: var(--yellow); top: 50%; left: 50%; animation-delay: -7s; }
+
+  @keyframes drift {
+    0%   { transform: translate(0,0) scale(1); }
+    100% { transform: translate(40px,30px) scale(1.1); }
+  }
+
+  .card {
+    position: relative;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(0,245,255,0.2);
+    border-radius: 24px;
+    padding: 36px 32px 32px;
+    width: min(94vw, 440px);
+    backdrop-filter: blur(20px);
+    box-shadow: 0 0 60px rgba(0,245,255,0.07), inset 0 1px 0 rgba(255,255,255,0.07);
+    text-align: center;
+    animation: cardIn 0.6s cubic-bezier(.22,1,.36,1);
+  }
+
+  @keyframes cardIn {
+    from { opacity:0; transform:translateY(30px) scale(0.96); }
+    to   { opacity:1; transform:none; }
+  }
+
+  .badge {
+    display: inline-block;
+    font-family: 'Orbitron', monospace;
+    font-size: 0.58rem;
+    letter-spacing: 0.25em;
+    color: var(--cyan);
+    border: 1px solid rgba(0,245,255,0.3);
+    padding: 4px 14px;
+    border-radius: 100px;
+    margin-bottom: 14px;
+  }
+
+  h1 {
+    font-family: 'Orbitron', monospace;
+    font-size: clamp(1.4rem, 5vw, 2rem);
+    font-weight: 900;
+    color: #fff;
+    line-height: 1.1;
+    margin-bottom: 4px;
+  }
+
+  h1 span { background: linear-gradient(90deg, var(--cyan), var(--pink)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+
+  .subtitle { color: rgba(255,255,255,0.35); font-size: 0.85rem; letter-spacing: 0.05em; margin-bottom: 24px; }
+
+  /* ── RANGE BAR ── */
+  .range-section { margin-bottom: 22px; }
+
+  .range-labels {
+    display: flex;
+    justify-content: space-between;
+    font-family: 'Orbitron', monospace;
+    font-size: 0.72rem;
+    margin-bottom: 8px;
+  }
+
+  #low-label  { color: var(--cyan); }
+  #high-label { color: var(--pink); }
+
+  .range-track {
+    width: 100%;
+    height: 12px;
+    background: rgba(255,255,255,0.06);
+    border-radius: 10px;
+    position: relative;
+    overflow: visible;
+  }
+
+  .range-fill {
+    position: absolute;
+    top: 0; bottom: 0;
+    border-radius: 10px;
+    background: linear-gradient(90deg, var(--cyan), var(--pink));
+    transition: left 0.55s cubic-bezier(.34,1.56,.64,1), width 0.55s cubic-bezier(.34,1.56,.64,1);
+    box-shadow: 0 0 12px rgba(0,245,255,0.4);
+  }
+
+  .guess-dot {
+    position: absolute;
+    top: 50%;
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    transform: translate(-50%, -50%) scale(0);
+    transition: left 0.5s cubic-bezier(.34,1.56,.64,1), transform 0.3s, background 0.3s;
+    border: 2px solid #fff;
+    z-index: 2;
+  }
+
+  .guess-dot.visible  { transform: translate(-50%, -50%) scale(1); }
+  .guess-dot.high     { background: var(--pink);  box-shadow: 0 0 10px var(--pink); }
+  .guess-dot.low      { background: var(--cyan);  box-shadow: 0 0 10px var(--cyan); }
+  .guess-dot.warm     { background: #ffaa00;      box-shadow: 0 0 10px #ffaa00; }
+  .guess-dot.correct  { background: var(--green); box-shadow: 0 0 16px var(--green); }
+
+  .range-hint {
+    font-size: 0.65rem;
+    color: rgba(255,255,255,0.3);
+    margin-top: 9px;
+    letter-spacing: 0.07em;
+    min-height: 14px;
+  }
+
+  /* ── HEARTS ── */
+  .chances-wrap { margin-bottom: 20px; }
+  .chances-label { font-size: 0.65rem; letter-spacing: 0.2em; color: rgba(255,255,255,0.3); text-transform: uppercase; margin-bottom: 10px; }
+  .hearts { display: flex; justify-content: center; flex-wrap: wrap; gap: 5px; }
+
+  .heart {
+    font-size: 1.2rem;
+    transition: transform 0.3s, filter 0.3s;
+    filter: drop-shadow(0 0 5px var(--pink));
+  }
+
+  .heart.lost { filter: grayscale(1) brightness(0.2); transform: scale(0.7); }
+  .heart.losing { animation: heartPop 0.4s ease forwards; }
+
+  @keyframes heartPop {
+    0%   { transform: scale(1); }
+    30%  { transform: scale(1.4) rotate(-20deg); }
+    60%  { transform: scale(0.6) rotate(10deg); }
+    100% { transform: scale(0.7); }
+  }
+
+  /* ── INPUT ── */
+  .input-row { display: flex; gap: 10px; margin-bottom: 18px; }
+
+  input[type="number"] {
+    flex: 1;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(0,245,255,0.25);
+    border-radius: 12px;
+    color: #fff;
+    font-family: 'Orbitron', monospace;
+    font-size: 1.2rem;
+    padding: 14px 18px;
+    outline: none;
+    text-align: center;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    -moz-appearance: textfield;
+  }
+
+  input::-webkit-inner-spin-button, input::-webkit-outer-spin-button { -webkit-appearance: none; }
+  input:focus { border-color: var(--cyan); box-shadow: 0 0 0 3px rgba(0,245,255,0.12); }
+  input:disabled { opacity: 0.4; }
+
+  .btn {
+    background: linear-gradient(135deg, var(--cyan), #0099ff);
+    border: none; border-radius: 12px;
+    color: #07030f;
+    font-family: 'Orbitron', monospace;
+    font-size: 0.72rem; font-weight: 700;
+    padding: 14px 18px;
+    cursor: pointer; letter-spacing: 0.05em;
+    transition: opacity 0.2s, transform 0.15s;
+    white-space: nowrap;
+  }
+
+  .btn:hover:not(:disabled) { opacity: 0.85; transform: scale(1.04); }
+  .btn:active:not(:disabled) { transform: scale(0.97); }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* ── FEEDBACK ── */
+  .feedback {
+    min-height: 56px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 14px;
+    font-size: 1rem; font-weight: 600; letter-spacing: 0.04em;
+    padding: 12px; margin-bottom: 14px;
+    opacity: 0; transition: all 0.3s;
+  }
+
+  .feedback.show { opacity: 1; animation: fbPop 0.35s ease; }
+  @keyframes fbPop { 0%,100%{transform:scale(1)} 50%{transform:scale(1.03)} }
+
+  .feedback.high { background: rgba(255,45,120,0.12); border: 1px solid rgba(255,45,120,0.3); color: var(--pink); }
+  .feedback.low  { background: rgba(0,245,255,0.08);  border: 1px solid rgba(0,245,255,0.25); color: var(--cyan); }
+  .feedback.win  { background: rgba(0,255,136,0.1);   border: 1px solid rgba(0,255,136,0.4);  color: var(--green); }
+  .feedback.lose { background: rgba(255,45,120,0.1);  border: 1px solid rgba(255,45,120,0.25);color: var(--pink); }
+
+  .reveal { font-family: 'Orbitron', monospace; font-size: 0.65rem; color: rgba(255,255,255,0.25); letter-spacing: 0.15em; margin-bottom: 16px; min-height: 16px; }
+  .reveal span { color: var(--yellow); font-size: 1rem; }
+
+  .btn-reset {
+    background: transparent;
+    border: 1px solid rgba(255,255,255,0.15); border-radius: 12px;
+    color: rgba(255,255,255,0.5);
+    font-family: 'Rajdhani', sans-serif; font-size: 0.9rem; font-weight: 600;
+    padding: 10px 28px; cursor: pointer; letter-spacing: 0.08em;
+    transition: all 0.2s; display: none;
+  }
+
+  .btn-reset.show { display: inline-block; }
+  .btn-reset:hover { border-color: var(--cyan); color: var(--cyan); }
+
+  .card.shake-card { animation: shakeCard 0.4s ease; }
+  @keyframes shakeCard {
+    0%,100% { transform: translateX(0); }
+    20%     { transform: translateX(-8px); }
+    40%     { transform: translateX(8px); }
+    60%     { transform: translateX(-5px); }
+    80%     { transform: translateX(5px); }
+  }
+</style>
+</head>
+<body>
+
+<div class="orb orb1"></div>
+<div class="orb orb2"></div>
+<div class="orb orb3"></div>
+
+<div class="card" id="card">
+  <div class="badge">MINI GAME</div>
+  <h1>Guess the <span>Number</span></h1>
+  <p class="subtitle">Between 1 and 30 · 4 chances</p>
+
+  <div class="range-section">
+    <div class="range-labels">
+      <span id="low-label">1</span>
+      <span id="high-label">100</span>
+    </div>
+    <div class="range-track">
+      <div class="range-fill" id="range-fill" style="left:0%;width:100%"></div>
+      <div class="guess-dot" id="guess-dot"></div>
+    </div>
+    <div class="range-hint" id="range-hint">Type a number — watch the bar move! 👆</div>
+  </div>
+
+  <div class="chances-wrap">
+    <div class="chances-label">Chances Left</div>
+    <div class="hearts" id="hearts"></div>
+  </div>
+
+  <div class="input-row">
+    <input type="number" id="guess-input" min="1" max="30" placeholder="1-30" />
+    <button class="btn" id="guess-btn">GUESS</button>
+  </div>
+
+  <div class="feedback" id="feedback"></div>
+  <div class="reveal" id="reveal"></div>
+  <button class="btn-reset" id="reset-btn">↺ Play Again</button>
+</div>
+
+<script>
+  const MAX = 30;   // ← sirf yahan badlao range ke liye
+  const TOTAL = 4;  // ← sirf yahan badlao chances ke liye
+
+  let ctx;
+  function initAudio() { if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)(); }
+
+  function playSound(type) {
+    try {
+      initAudio();
+      if (type === 'wrong') {
+        const o = ctx.createOscillator(), g = ctx.createGain();
+        o.connect(g); g.connect(ctx.destination);
+        o.type = 'sawtooth';
+        o.frequency.setValueAtTime(320, ctx.currentTime);
+        o.frequency.exponentialRampToValueAtTime(80, ctx.currentTime + 0.45);
+        g.gain.setValueAtTime(0.3, ctx.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.45);
+        o.start(); o.stop(ctx.currentTime + 0.45);
+      }
+      if (type === 'win') {
+        [523,659,784,1047].forEach((freq,i) => {
+          const o = ctx.createOscillator(), g = ctx.createGain();
+          o.connect(g); g.connect(ctx.destination);
+          o.type = 'sine'; o.frequency.value = freq;
+          const t = ctx.currentTime + i * 0.13;
+          g.gain.setValueAtTime(0, t);
+          g.gain.linearRampToValueAtTime(0.25, t+0.05);
+          g.gain.exponentialRampToValueAtTime(0.001, t+0.4);
+          o.start(t); o.stop(t+0.4);
+        });
+      }
+      if (type === 'lose') {
+        [220,165,110].forEach((freq,i) => {
+          const o = ctx.createOscillator(), g = ctx.createGain();
+          o.connect(g); g.connect(ctx.destination);
+          o.type = 'square'; o.frequency.value = freq;
+          const t = ctx.currentTime + i * 0.22;
+          g.gain.setValueAtTime(0.2, t);
+          g.gain.exponentialRampToValueAtTime(0.001, t+0.28);
+          o.start(t); o.stop(t+0.28);
+        });
+      }
+      if (type === 'tick') {
+        const o = ctx.createOscillator(), g = ctx.createGain();
+        o.connect(g); g.connect(ctx.destination);
+        o.type = 'sine'; o.frequency.value = 500 + Math.random()*300;
+        g.gain.setValueAtTime(0.04, ctx.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime+0.07);
+        o.start(); o.stop(ctx.currentTime+0.07);
+      }
+    } catch(e) {}
+  }
+
+  let number, chancesLeft, lowBound, highBound, gameOver;
+
+  function buildHearts() {
+    const c = document.getElementById('hearts');
+    c.innerHTML = '';
+    for (let i = 0; i < TOTAL; i++) {
+      const h = document.createElement('span');
+      h.className = 'heart'; h.id = `h${i}`; h.textContent = '❤️';
+      c.appendChild(h);
+    }
+  }
+
+  function resetGame() {
+    number      = Math.floor(Math.random() * MAX) + 1;
+    chancesLeft = TOTAL;
+    lowBound    = 1;
+    highBound   = MAX;
+    gameOver    = false;
+
+    const inp = document.getElementById('guess-input');
+    inp.value = ''; inp.disabled = false;
+    document.getElementById('guess-btn').disabled  = false;
+    document.getElementById('reset-btn').classList.remove('show');
+    document.getElementById('reveal').innerHTML    = '';
+    document.getElementById('range-hint').textContent = 'Type a number — watch the bar move! 👆';
+
+    const fb = document.getElementById('feedback');
+    fb.className = 'feedback'; fb.textContent = '';
+
+    buildHearts();
+    setBar(0, 100);
+    hideDot();
+  }
+
+  function setBar(leftPct, widthPct) {
+    const f = document.getElementById('range-fill');
+    f.style.left  = leftPct + '%';
+    f.style.width = widthPct + '%';
+    document.getElementById('low-label').textContent  = lowBound;
+    document.getElementById('high-label').textContent = highBound;
+  }
+
+  function moveDot(val, cls) {
+    const pct = ((val - 1) / (MAX - 1)) * 100;
+    const d   = document.getElementById('guess-dot');
+    d.style.left = pct + '%';
+    d.className  = 'guess-dot visible ' + cls;
+  }
+
+  function hideDot() { document.getElementById('guess-dot').className = 'guess-dot'; }
+
+  function loseHeart() {
+    const idx = TOTAL - chancesLeft;
+    const h   = document.getElementById(`h${TOTAL - 1 - idx}`);
+    if (h) { h.classList.add('losing'); setTimeout(() => h.classList.add('lost'), 400); }
+  }
+
+  function shakeCard() {
+    const c = document.getElementById('card');
+    c.classList.remove('shake-card'); void c.offsetWidth; c.classList.add('shake-card');
+    setTimeout(() => c.classList.remove('shake-card'), 500);
+  }
+
+  function showFeedback(msg, type) {
+    const fb = document.getElementById('feedback');
+    fb.className = 'feedback ' + type; fb.textContent = msg;
+    void fb.offsetWidth; fb.classList.add('show');
+  }
+
+  // Live dot on typing
+  document.getElementById('guess-input').addEventListener('input', e => {
+    if (gameOver) return;
+    const val = parseInt(e.target.value);
+    if (!val || val < 1 || val > MAX) { hideDot(); return; }
+    playSound('tick');
+    const diff = Math.abs(val - number);
+    const cls  = diff === 0 ? 'correct' : diff <= 8 ? 'warm' : val > number ? 'high' : 'low';
+    moveDot(val, cls);
+  });
+
+  document.getElementById('guess-btn').addEventListener('click', makeGuess);
+  document.getElementById('reset-btn').addEventListener('click', resetGame);
+  document.getElementById('guess-input').addEventListener('keydown', e => { if (e.key === 'Enter') makeGuess(); });
+
+  function makeGuess() {
+    if (gameOver) return;
+    initAudio();
+    const inp   = document.getElementById('guess-input');
+    const guess = parseInt(inp.value);
+
+    if (!guess || guess < 1 || guess > MAX) {
+      showFeedback(`⚠️  Enter a number between 1 and ${MAX}!`, 'high');
+      return;
+    }
+
+    chancesLeft--;
+    loseHeart();
+    inp.value = '';
+    hideDot();
+
+    if (guess === number) {
+      playSound('win');
+      moveDot(guess, 'correct');
+      document.getElementById('range-hint').textContent = '🎯 Bullseye! You nailed it!';
+      showFeedback(`🎉  You Win! Number was ${number}!`, 'win');
+      endGame(); return;
+    }
+
+    if (chancesLeft === 0) {
+      playSound('lose');
+      moveDot(guess, guess > number ? 'high' : 'low');
+      document.getElementById('reveal').innerHTML = `THE NUMBER WAS <span>${number}</span>`;
+      document.getElementById('range-hint').textContent = 'Better luck next time!';
+      showFeedback('💀  Game Over!', 'lose');
+      endGame(); return;
+    }
+
+    playSound('wrong');
+    shakeCard();
+
+    if (guess > number) {
+      highBound = Math.min(highBound, guess);
+      const lp = ((lowBound - 1) / (MAX - 1)) * 100;
+      const wp = ((highBound - lowBound) / (MAX - 1)) * 100;
+      setBar(lp, wp);
+      moveDot(guess, 'high');
+      document.getElementById('range-hint').textContent = `📉 Too High! Now searching ${lowBound}–${highBound}`;
+      showFeedback(`📉 Too High! ${chancesLeft} chances left`, 'high');
+    } else {
+      lowBound = Math.max(lowBound, guess);
+      const lp = ((lowBound - 1) / (MAX - 1)) * 100;
+      const wp = ((highBound - lowBound) / (MAX - 1)) * 100;
+      setBar(lp, wp);
+      moveDot(guess, 'low');
+      document.getElementById('range-hint').textContent = `📈 Too Low! Now searching ${lowBound}–${highBound}`;
+      showFeedback(`📈 Too Low! ${chancesLeft} chances left`, 'low');
+    }
+  }
+
+  function endGame() {
+    gameOver = true;
+    document.getElementById('guess-input').disabled = true;
+    document.getElementById('guess-btn').disabled   = true;
+    document.getElementById('reset-btn').classList.add('show');
+  }
+
+  resetGame();
+</script>
+</body>
+</html>
